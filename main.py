@@ -1,5 +1,14 @@
 from fastapi import FastAPI
 from fastapi import responses
+from pydantic import BaseModel
+
+class Device(BaseModel):
+    device_id: str
+    owner: str
+    type: str
+    room: str
+    online: bool
+
 app = FastAPI()
 
 devices: list[dict] = [
@@ -66,10 +75,36 @@ devices: list[dict] = [
     }
 ]
 
-@app.get("/")
-def home():
-    return {"Hello": "World"}
 
 @app.get("/api/devices")
 def get_devices():
     return devices
+
+@app.get("/api/devices/{device_id}")
+def get_devices_by_id(device_id: int):
+    
+    for device in devices:
+        if device["id"] == device_id:
+            return device
+    return responses.JSONResponse(status_code=404, content={"message": "Device not found"})
+@app.post("/api/devices")
+def create_device(device: Device):
+
+    new_device = {
+        "id": len(devices) + 1,
+        "device_id": device.device_id,
+        "owner": device.owner,
+        "type": device.type,
+        "room": device.room,
+        "online": device.online
+    }
+
+    devices.append(new_device)
+
+    return responses.JSONResponse(
+        status_code=201,
+        content={
+            "message": "Device created successfully",
+            "device": new_device
+        }
+    )
