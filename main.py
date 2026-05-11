@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import FastAPI
 from fastapi import responses
 from pydantic import BaseModel
@@ -8,6 +9,22 @@ class Device(BaseModel):
     type: str
     room: str
     online: bool
+
+    # Socket fields
+    power_w: Optional[float] = None
+    voltage: Optional[int] = None
+
+    # Water sensor fields
+    leak_detected: Optional[bool] = None
+    battery: Optional[int] = None
+
+    # Temperature sensor fields
+    temperature_c: Optional[float] = None
+    humidity: Optional[int] = None
+
+    # Light fields
+    status: Optional[str] = None
+    brightness: Optional[int] = None
 
 app = FastAPI()
 
@@ -92,12 +109,7 @@ def create_device(device: Device):
 
     new_device = {
         "id": len(devices) + 1,
-        "device_id": device.device_id,
-        "owner": device.owner,
-        "type": device.type,
-        "room": device.room,
-        "online": device.online
-        
+        **device.model_dump(exclude_none=True)
     }
 
     devices.append(new_device)
