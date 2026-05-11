@@ -1,32 +1,49 @@
-from typing import Optional
+from typing import Union, Literal
 from fastapi import FastAPI
 from fastapi import responses
 from pydantic import BaseModel
 
-class Device(BaseModel):
+app = FastAPI()
+
+
+class BaseDevice(BaseModel):
     device_id: str
     owner: str
-    type: str
     room: str
     online: bool
 
-    # Socket fields
-    power_w: Optional[float] = None
-    voltage: Optional[int] = None
 
-    # Water sensor fields
-    leak_detected: Optional[bool] = None
-    battery: Optional[int] = None
+class SocketDevice(BaseDevice):
+    type: Literal["Socket"]
+    power_w: float
+    voltage: int
 
-    # Temperature sensor fields
-    temperature_c: Optional[float] = None
-    humidity: Optional[int] = None
 
-    # Light fields
-    status: Optional[str] = None
-    brightness: Optional[int] = None
+class WaterLeakSensor(BaseDevice):
+    type: Literal["WaterLeakSensor"]
+    leak_detected: bool
+    battery: int
 
-app = FastAPI()
+
+class TemperatureSensor(BaseDevice):
+    type: Literal["TemperatureSensor"]
+    temperature_c: float
+    humidity: int
+
+
+class LightDevice(BaseDevice):
+    type: Literal["Light"]
+    status: str
+    brightness: int
+
+
+Device = Union[
+    SocketDevice,
+    WaterLeakSensor,
+    TemperatureSensor,
+    LightDevice
+]
+
 
 devices: list[dict] = [
     {
@@ -97,19 +114,26 @@ devices: list[dict] = [
 def get_devices():
     return devices
 
+
 @app.get("/api/devices/{device_id}")
-def get_devices_by_id(device_id: int):
-    
+def get_device_by_id(device_id: int):
+
     for device in devices:
         if device["id"] == device_id:
             return device
-    return responses.JSONResponse(status_code=404, content={"message": "Device not found"})
+
+    return responses.JSONResponse(
+        status_code=404,
+        content={"message": "Device not found"}
+    )
+
+
 @app.post("/api/devices")
 def create_device(device: Device):
 
     new_device = {
         "id": len(devices) + 1,
-        **device.model_dump(exclude_none=True)
+        **device.model_dump()
     }
 
     devices.append(new_device)
@@ -121,6 +145,7 @@ def create_device(device: Device):
             "device": new_device
         }
     )
+
 
 @app.get("/api/devices/type/{device_type}")
 def get_devices_by_type(device_type: str):
@@ -138,3 +163,52 @@ def get_devices_by_type(device_type: str):
         )
 
     return matched_devices
+
+@app.put("/api/devices/{device_id}")
+def update_device(device_id: int, updated_device: Device):
+
+    for index, device in enumerate(devices):
+
+        if device["id"] == device_id:
+
+            updated_data = {
+                "id": device_id,
+                **updated_device.model_dump()
+            }
+
+            devices[index] = updated_data
+
+            return responses.JSONResponse(
+                status_code=200,
+                content={
+                    "message": "Device updated successfully",
+                    "device": updated_data
+                }
+            )
+
+    return responses.JSONResponse(
+        status_code=404,
+        content={"message": "Device not found"}
+    )
+    
+@app.delete("/api/devices/{device_id}")
+def delete_device(device_id: int):
+
+    for index, device in enumerate(devices):
+
+        if device["id"] == device_id:
+
+            deleted_device = devices.pop(index)
+
+            return responses.JSONResponse(
+                status_code=200,
+                content={
+                    "message": "Device deleted successfully",
+                    "device": deleted_device
+                }
+            )
+
+    return responses.JSONResponse(
+        status_code=404,
+        content={"message": "Device not found"}
+    )
