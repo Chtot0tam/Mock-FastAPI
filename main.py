@@ -97,6 +97,7 @@ def create_device(device: Device):
         "type": device.type,
         "room": device.room,
         "online": device.online
+        
     }
 
     devices.append(new_device)
@@ -108,3 +109,20 @@ def create_device(device: Device):
             "device": new_device
         }
     )
+
+@app.get("/api/devices/type/{device_type}")
+def get_devices_by_type(device_type: str):
+
+    matched_devices = []
+
+    for device in devices:
+        if device["type"].lower() == device_type.lower():
+            matched_devices.append(device)
+
+    if not matched_devices:
+        return responses.JSONResponse(
+            status_code=404,
+            content={"message": "Devices not found"}
+        )
+
+    return matched_devices
