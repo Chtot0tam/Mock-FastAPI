@@ -41,7 +41,10 @@ class LoginRequest(BaseModel):
     username: str
     password: str
 
-
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    
 Device = Union[
     SocketDevice,
     WaterLeakSensor,
@@ -258,3 +261,35 @@ def login(data: LoginRequest):
         status_code=401,
         content={"message": "Invalid credentials"}
     )
+    
+@app.post("/register")
+def register(data: RegisterRequest):
+
+    for user in users:
+        if user["username"] == data.username:
+
+            return responses.JSONResponse(
+                status_code=409,
+                content={"message": "Username already exists"}
+            )
+
+    new_user = {
+        "username": data.username,
+        "password": data.password,
+        "token": f"{data.username}-token",
+        "role": "user"
+    }
+
+    users.append(new_user)
+
+    return responses.JSONResponse(
+        status_code=201,
+        content={
+            "message": "User registered successfully",
+            "user": {
+                "username": new_user["username"],
+                "role": new_user["role"]
+            }
+        }
+    )
+    
