@@ -2,6 +2,7 @@ from typing import Union, Literal
 from fastapi import FastAPI
 from fastapi import responses
 from pydantic import BaseModel
+from fastapi import Header
 
 app = FastAPI()
 
@@ -35,6 +36,10 @@ class LightDevice(BaseDevice):
     type: Literal["Light"]
     status: str
     brightness: int
+    
+class LoginRequest(BaseModel):
+    username: str
+    password: str
 
 
 Device = Union[
@@ -44,6 +49,26 @@ Device = Union[
     LightDevice
 ]
 
+users: list[dict] = [
+    {
+        "username": "admin",
+        "password": "admin123",
+        "token": "admin-token",
+        "role": "admin"
+    },
+    {
+        "username": "user1",
+        "password": "user123",
+        "token": "user1-token",
+        "role": "user"
+    },
+    {
+        "username": "user2",
+        "password": "user234",
+        "token": "user2-token",
+        "role": "user"
+    }
+]
 
 devices: list[dict] = [
     {
@@ -211,4 +236,25 @@ def delete_device(device_id: int):
     return responses.JSONResponse(
         status_code=404,
         content={"message": "Device not found"}
+    )
+    
+@app.post("/login")
+def login(data: LoginRequest):
+
+    for user in users:
+
+        if (
+            user["username"] == data.username
+            and user["password"] == data.password
+        ):
+
+            return {
+                "message": "Login successful",
+                "token": user["token"],
+                "role": user["role"]
+            }
+
+    return responses.JSONResponse(
+        status_code=401,
+        content={"message": "Invalid credentials"}
     )
