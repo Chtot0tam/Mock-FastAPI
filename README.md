@@ -223,3 +223,35 @@ No ownership check beyond the admin role. An admin can delete any user's device 
 | API3 — Broken Object Property Level Authorization | GET /devices |
 | API5 — Broken Function Level Authorization | POST /devices, PUT /devices/{id}, DELETE /devices/{id} |
 | API8 — Security Misconfiguration | POST /login, POST /register, GET /devices/type/{type} |
+
+## Threat Model
+### Assest
+1. Device data: status, type, owner.
+2. Auth tokens: JWT, credentials.
+3. User Accounts.
+### Actors
+1. Unauthenticated user
+2. Authenticated user
+### Attack paths
+1. Brute force login: no limit on POST/login
+2. Input injection: device_type string not controlled
+3. Weak passwords: no requirements for passwords
+4. Token forgery: key in memory
+6. Device enumeration: sequential IDs and no owner check
+7. IDOR - device access: any user reads any device
+### Mitigations
+1. Rate limitting: slowapi fixes brute force
+2. Owner filtering: fixes IDOR - device access
+3. Type allowlist: fixes injection risks
+4. Password policy: min length and complexity
+5. PyJWT: fixes forgery risks
+## Threat Model — Risk Matrix
+| Threat | Likelihood | Impact | Priority |
+|---|---|---|---|
+| Brute force login | High | High | 🔴 Critical |
+| IDOR — device access | High | High | 🔴 Critical |
+| Mass data exposure | High | Medium | 🟠 High |
+| Token forgery risk | Medium | High | 🟠 High |
+| Input injection | Medium | Medium | 🟡 Medium |
+| Admin alert suppression | Low | High | 🟡 Medium |
+| Unsafe full update (PUT) | Low | Medium | 🟢 Low |

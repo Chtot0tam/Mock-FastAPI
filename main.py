@@ -12,11 +12,9 @@ import time
 
 app = FastAPI()
 
-# ──────────────────────────────────────────────
-# JWT-like token helpers (без внешних зависимостей)
-# ──────────────────────────────────────────────
+# JWT-like token helpers 
 
-SECRET_KEY = secrets.token_hex(32)  # в проде — выносить в переменные окружения
+SECRET_KEY = secrets.token_hex(32) 
 TOKEN_TTL = 3600  # 1 час
 
 
@@ -51,9 +49,7 @@ def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
 
-# ──────────────────────────────────────────────
-# Dependency: получить текущего пользователя
-# ──────────────────────────────────────────────
+# Dependency: Get current user 
 
 bearer_scheme = HTTPBearer()
 
@@ -72,10 +68,7 @@ def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return current_user
 
-
-# ──────────────────────────────────────────────
-# Модели
-# ──────────────────────────────────────────────
+# Models
 
 class BaseDevice(BaseModel):
     device_id: str
@@ -120,9 +113,7 @@ class RegisterRequest(BaseModel):
 
 Device = Union[SocketDevice, WaterLeakSensor, TemperatureSensor, LightDevice]
 
-# ──────────────────────────────────────────────
-# Данные (в памяти; замените на БД в проде)
-# ──────────────────────────────────────────────
+# BDs
 
 users: list[dict] = [
     {"username": "admin",  "password": hash_password("admin123"), "role": "admin"},
@@ -139,9 +130,7 @@ devices: list[dict] = [
     {"id": 6, "device_id": "light-01",  "owner": "admin",  "type": "Light",             "room": "Office",      "online": True,  "status": "On", "brightness": 80},
 ]
 
-# ──────────────────────────────────────────────
-# Auth эндпоинты
-# ──────────────────────────────────────────────
+# Auth 
 
 @app.post("/login")
 def login(data: LoginRequest):
@@ -162,20 +151,17 @@ def register(data: RegisterRequest):
     users.append(new_user)
     return {"message": "User registered successfully", "user": {"username": data.username, "role": "user"}}
 
-
-# ──────────────────────────────────────────────
-# Devices эндпоинты
-# ──────────────────────────────────────────────
+# Devices
 
 @app.get("/api/devices")
 def get_devices(_: dict = Depends(get_current_user)):
-    """Доступно всем авторизованным пользователям."""
+    """Only for authorized users."""
     return devices
 
 
 @app.get("/api/devices/type/{device_type}")
 def get_devices_by_type(device_type: str, _: dict = Depends(get_current_user)):
-    """Доступно всем авторизованным пользователям. (объявлен ДО /{device_id})"""
+    """Only for authorized users."""
     matched = [d for d in devices if d["type"].lower() == device_type.lower()]
     if not matched:
         raise HTTPException(status_code=404, detail="Devices not found")
@@ -184,7 +170,7 @@ def get_devices_by_type(device_type: str, _: dict = Depends(get_current_user)):
 
 @app.get("/api/devices/{device_id}")
 def get_device_by_id(device_id: int, _: dict = Depends(get_current_user)):
-    """Доступно всем авторизованным пользователям."""
+    """Only for authorized users."""
     device = next((d for d in devices if d["id"] == device_id), None)
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
@@ -193,7 +179,7 @@ def get_device_by_id(device_id: int, _: dict = Depends(get_current_user)):
 
 @app.post("/api/devices", status_code=201)
 def create_device(device: Device, _: dict = Depends(require_admin)):
-    """Только для администраторов."""
+    """Only for administrators."""
     new_device = {"id": len(devices) + 1, **device.model_dump()}
     devices.append(new_device)
     return {"message": "Device created successfully", "device": new_device}
@@ -201,7 +187,7 @@ def create_device(device: Device, _: dict = Depends(require_admin)):
 
 @app.put("/api/devices/{device_id}")
 def update_device(device_id: int, updated_device: Device, _: dict = Depends(require_admin)):
-    """Только для администраторов."""
+    """Only for administrators."""
     for index, device in enumerate(devices):
         if device["id"] == device_id:
             updated_data = {"id": device_id, **updated_device.model_dump()}
@@ -212,7 +198,7 @@ def update_device(device_id: int, updated_device: Device, _: dict = Depends(requ
 
 @app.delete("/api/devices/{device_id}")
 def delete_device(device_id: int, _: dict = Depends(require_admin)):
-    """Только для администраторов."""
+    """Only for administrators."""
     for index, device in enumerate(devices):
         if device["id"] == device_id:
             deleted_device = devices.pop(index)
